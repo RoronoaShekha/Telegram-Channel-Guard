@@ -1,0 +1,42 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+@@ -1,5 +1,11 @@
+     public ArrayList<TLRPC.Dialog> getDialogsArray(int currentAccount, int dialogsType, int folderId, boolean frozen) {
++        ArrayList<TLRPC.Dialog> rawDialogs = getDialogsArrayUnfiltered(currentAccount, dialogsType, folderId, frozen);
++        return org.telegram.messenger.ParentalControlManager.getInstance().filterDialogsList(rawDialogs, currentAccount);
++    }
++
++    private ArrayList<TLRPC.Dialog> getDialogsArrayUnfiltered(int currentAccount, int dialogsType, int folderId, boolean frozen) {
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+@@ -1,4 +1,18 @@
+     public void updateInterfaceWithMessages(long uid, ArrayList<MessageObject> messages, boolean isBroadcast) {
++        if (org.telegram.messenger.ParentalControlManager.getInstance().isChildMode()
++                && !org.telegram.messenger.ParentalControlManager.getInstance().isDialogAllowed(uid, currentAccount)) {
++            return;
++        }
++        if (messages != null && org.telegram.messenger.ParentalControlManager.getInstance().isChildMode()) {
++            for (int _i = messages.size() - 1; _i >= 0; _i--) {
++                if (org.telegram.messenger.ParentalControlManager.getInstance().shouldBlockMessage(messages.get(_i), currentAccount)) {
++                    messages.remove(_i);
++                }
++            }
++            if (messages.isEmpty()) return;
++        }
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java b/TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java
+@@ -1,4 +1,17 @@
+     public void processNewMessages(ArrayList<MessageObject> messageObjects, boolean isLast, boolean isFcm, CountDownLatch countDownLatch) {
++        if (messageObjects != null && org.telegram.messenger.ParentalControlManager.getInstance().isChildMode()) {
++            ArrayList<MessageObject> _allowed = new ArrayList<>();
++            for (int _i = 0; _i < messageObjects.size(); _i++) {
++                MessageObject _m = messageObjects.get(_i);
++                if (!org.telegram.messenger.ParentalControlManager.getInstance().shouldBlockMessage(_m, currentAccount)) {
++                    _allowed.add(_m);\n+                }
++            }
++            messageObjects = _allowed;
++            if (messageObjects.isEmpty()) return;
++        }

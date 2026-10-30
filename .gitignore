@@ -1,0 +1,11 @@
+telegram-src/
+output-apk/
+*.apk
+*.keystore
+*.jks
+local.properties
+.gradle/
+.idea/
+__pycache__/
+*.pyc
+.DS_Store
